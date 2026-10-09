@@ -9,12 +9,11 @@ the assigned tables (Table 2, 3, 4) and figure (Figure 1), and runs the
 extension and robustness results — without any manual editing of data or code.
 """
 import os
-import subprocess
-import sys
 
 import numpy as np
 import pandas as pd
 import statsmodels.api as sm
+import statsmodels.formula.api as smf
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -299,10 +298,49 @@ def extension():
     out.to_csv("outputs/tables/extension_ownership.csv", index=False)
 
 
-# Remaining steps are still run as separate scripts (merged one at a time).
-STEPS = [
-    "code/05_robustness.py",          # robustness to controls
-]
+# --------------------------------------------------------------------------
+# Step 4 — robustness checks (merged from code/05_robustness.py)
+# --------------------------------------------------------------------------
+def robustness():
+    """Estimate the employment DiD under progressively richer specifications."""
+    df = pd.read_csv("data/processed/wide.csv")
+    os.makedirs("outputs/tables", exist_ok=True)
+
+    def fit(formula, data):
+        r = smf.ols(formula, data=data).fit(cov_type="HC1")
+        return r.params["treated"], r.bse["treated"], int(r.nobs)
+
+    # (0) baseline on the full balanced sample -- same as the Table 4 DiD
+    d_full = df.dropna(subset=["fte1", "fte2"]).copy()
+    d_full["ch"] = d_full["fte2"] - d_full["fte1"]
+
+    # control-complete sample, fixed across specifications (1)-(3).
+    # Note: NJ-region dummies (SOUTHJ/CENTRALJ/NORTHJ) are omitted on purpose --
+    # they are collinear with `treated` and would absorb the treatment effect.
+    d = df.dropna(subset=["fte1", "fte2", "CHAIN", "CO_OWNED", "HRSOPEN",
+                          "PSODA", "PFRY", "PENTREE"]).copy()
+    d["ch"] = d["fte2"] - d["fte1"]
+
+    rows = []
+    est, se, n = fit("ch ~ treated", d_full)
+    rows.append({"spec": "(0) baseline (full Table 4 sample)", "DiD": est, "SE": se, "n": n})
+
+    specs = [
+        ("(1) baseline (control-complete sample)", "ch ~ treated"),
+        ("(2) + chain FE", "ch ~ treated + C(CHAIN)"),
+        ("(3) + chain FE + ownership + hours + prices",
+         "ch ~ treated + C(CHAIN) + CO_OWNED + HRSOPEN + PSODA + PFRY + PENTREE"),
+    ]
+    for name, formula in specs:
+        est, se, n = fit(formula, d)
+        rows.append({"spec": name, "DiD": est, "SE": se, "n": n})
+
+    print("稳健性检验：不同设定下 NJ 的 DiD 系数（结果变量 = FTE 变化）")
+    print("=" * 74)
+    for r in rows:
+        print(f"{r['spec']:46s}  DiD = {r['DiD']:+6.3f}  (SE {r['SE']:.3f}, n={r['n']})")
+
+    pd.DataFrame(rows).to_csv("outputs/tables/robustness.csv", index=False)
 
 
 def main():
@@ -321,9 +359,10 @@ def main():
     print("=" * 70)
     extension()
 
-    for step in STEPS:
-        print(f"\n{'=' * 70}\n>>> {step}\n{'=' * 70}")
-        subprocess.run([sys.executable, "-I", step], check=True)
+    print("\n" + "=" * 70)
+    print(">>> robustness (inline)")
+    print("=" * 70)
+    robustness()
 
     print("\nDone. All outputs in data/processed/ and outputs/ are up to date.")
 
