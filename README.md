@@ -16,8 +16,8 @@ independent extension on ownership heterogeneity.
 
 | Estimate | This replication | Original paper |
 |---|---|---|
-| Wage DiD (Table 3) | +0.48 (SE 0.05) | +0.48 |
-| **FTE employment DiD (Table 4)** | **+2.75 (SE 1.34)** | **+2.76 (SE 1.36)** |
+| **FTE employment DiD (Table 3)** | **+2.75 (SE 1.34)** | **+2.76 (SE 1.36)** |
+| Wage DiD (Table 5) | +0.48 (SE 0.05) | +0.48 |
 
 The full write-up is in `report.pdf`.
 
@@ -53,14 +53,16 @@ python3 -m venv .venv
 ```
 
 `code/run_all.py` is a single self-contained script: it constructs the analysis
-sample, reproduces Table 2, Table 3, Table 4 and Figure 1, and runs the
-extension and robustness checks — all in one file, with no other scripts
+sample, reproduces Tables 2–5 and Figure 1, and runs the extension and
+robustness checks — all in one file, with no other scripts
 required. Running it regenerates every table (`outputs/tables/`) and figure
 (`outputs/figures/`) from `data/raw/` without any manual editing. Its four
 stages are:
 
 1. `build_sample()` — construct FTE, starting wage, treatment indicator
-2. `replicate()` — Table 2, Table 3, Table 4, and Figure 1 (paper format)
+2. `replicate()` — Table 2 (Means of Key Variables), Table 3 (Employment DiD),
+   Table 4 (Reduced-Form Models), Table 5 (Wage DiD), and Figure 1 (wage
+   distribution)
 3. `extension()` — ownership-heterogeneity extension
 4. `robustness()` — robustness to controls
 

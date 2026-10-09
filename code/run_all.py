@@ -27,7 +27,7 @@ def build_sample():
 
     FTE definition (Card & Krueger 1994): FTE = full-time + 0.5*part-time + managers.
     Prints the wave-1 means so the definition can be checked against the paper's
-    Table 3/4 (NJ FTE ~20.44, PA ~23.33; NJ wage ~4.61, PA ~4.63).
+    Table 2 (NJ FTE ~20.44, PA ~23.33; NJ wage ~4.61, PA ~4.63).
     """
     RAW = "data/raw/public.csv"
     df = pd.read_csv(RAW)
@@ -97,16 +97,16 @@ def replicate():
 
     Paper layout (Card & Krueger 1994):
       Table 2  = Means of Key Variables (store types + wave-1/2 means)
-      Table 3  = Average Employment per Store Before/After (DiD)
+      Table 3  = Average Employment per Store Before/After (FTE, DiD)
       Table 4  = Reduced-Form Models for Change in Employment (5 regressions)
       Table 5  = Reduced-Form Models for Change in Wages (wage DiD)
-      Figure 1 = Distribution of Wage Rate
+      Figure 1 = Distribution of Wage Rate (2 waves x 2 states)
 
-    For Table 3/5 the column layout follows the paper exactly:
-      Pennsylvania | New Jersey | Difference (NJ - PA)
-    with rows Wave 1 (before) / Wave 2 (after) / Change. As in the paper,
-    "Change" is the difference of the (full-sample) wave means, and the DiD is
-    the NJ-minus-PA difference of those changes.
+    Table 3 reproduces the paper's FTE-only layout: columns for Pennsylvania,
+    New Jersey, the NJ-PA difference, three NJ starting-wage groups, and the
+    low-high / mid-high contrasts; rows for before, after, the (unbalanced)
+    change, the balanced-sample change, and the change treating temporarily
+    closed stores as zero.
     """
     df = pd.read_csv("data/processed/wide.csv")
     os.makedirs("outputs/tables", exist_ok=True)
@@ -167,100 +167,163 @@ def replicate():
 
     # --- Table 2: Means of Key Variables --------------------------------
     CHAIN_NAMES = {1: "Burger King", 2: "KFC", 3: "Roy Rogers", 4: "Wendy's"}
+    nj_mask = df["STATE"] == 1
+    pa_mask = df["STATE"] == 0
 
-    def nj_pa(v):
-        return df.loc[df["STATE"] == 1, v].mean(), df.loc[df["STATE"] == 0, v].mean()
+    # percentage full-time employees = store-level mean of 100 * EMPFT / FTE
+    df["pctft1"] = 100 * df["EMPFT"] / df["fte1"]
+    df["pctft2"] = 100 * df["EMPFT2"] / df["fte2"]
 
-    def nj_pa_share(v, val):
-        nj = (df.loc[df["STATE"] == 1, v] == val).mean() * 100
-        pa = (df.loc[df["STATE"] == 0, v] == val).mean() * 100
-        return nj, pa
+    def t2_row(panel, label, nj_vals, pa_vals):
+        m1, m2 = nj_vals.mean(), pa_vals.mean()
+        se = np.sqrt(nj_vals.var(ddof=1) / nj_vals.notna().sum()
+                     + pa_vals.var(ddof=1) / pa_vals.notna().sum())
+        t = (m1 - m2) / se if se > 0 else np.nan
+        return [panel, label, m1, m2, t]
 
-    t2_rows = []
+    t2 = []
     for c in [1, 2, 3, 4]:
-        sh = df.groupby("STATE")["CHAIN"].apply(lambda s: (s == c).mean() * 100)
-        t2_rows.append(["A. Store types (%)", CHAIN_NAMES[c], sh[1], sh[0]])
-    co = df.groupby("STATE")["CO_OWNED"].mean() * 100
-    t2_rows.append(["A. Store types (%)", "Company-owned", co[1], co[0]])
+        t2.append(t2_row("A. Store types (%)", CHAIN_NAMES[c],
+                         100 * (df.loc[nj_mask, "CHAIN"] == c).astype(int),
+                         100 * (df.loc[pa_mask, "CHAIN"] == c).astype(int)))
+    t2.append(t2_row("A. Store types (%)", "Company-owned",
+                     100 * df.loc[nj_mask, "CO_OWNED"],
+                     100 * df.loc[pa_mask, "CO_OWNED"]))
 
-    for label, nj, pa in [
-        ("FTE employment", *nj_pa("fte1")),
-        ("Full-time workers", *nj_pa("EMPFT")),
-        ("Part-time workers", *nj_pa("EMPPT")),
-        ("Managers", *nj_pa("NMGRS")),
-        ("Starting wage ($/hr)", *nj_pa("wage1")),
-        ("% wage = $4.25", *nj_pa_share("wage1", 4.25)),
-        ("Price of full meal ($)", *nj_pa("meal1")),
-        ("Weekday hours open", *nj_pa("HRSOPEN")),
-        ("Recruiting bonus (%)", *(100 * x for x in nj_pa("BONUS"))),
-    ]:
-        t2_rows.append(["B. Wave 1 means", label, nj, pa])
+    t2.append(t2_row("B. Wave 1 means", "FTE employment",
+                     df.loc[nj_mask, "fte1"], df.loc[pa_mask, "fte1"]))
+    t2.append(t2_row("B. Wave 1 means", "Percentage full-time employees",
+                     df.loc[nj_mask, "pctft1"], df.loc[pa_mask, "pctft1"]))
+    t2.append(t2_row("B. Wave 1 means", "Starting wage ($/hr)",
+                     df.loc[nj_mask, "wage1"], df.loc[pa_mask, "wage1"]))
+    t2.append(t2_row("B. Wave 1 means", "Wage = $4.25 (%)",
+                     100 * (df.loc[nj_mask, "wage1"] == 4.25).astype(int),
+                     100 * (df.loc[pa_mask, "wage1"] == 4.25).astype(int)))
+    t2.append(t2_row("B. Wave 1 means", "Price of full meal ($)",
+                     df.loc[nj_mask, "meal1"], df.loc[pa_mask, "meal1"]))
+    t2.append(t2_row("B. Wave 1 means", "Hours open (weekday)",
+                     df.loc[nj_mask, "HRSOPEN"], df.loc[pa_mask, "HRSOPEN"]))
+    t2.append(t2_row("B. Wave 1 means", "Recruiting bonus (%)",
+                     100 * df.loc[nj_mask, "BONUS"], 100 * df.loc[pa_mask, "BONUS"]))
 
-    for label, nj, pa in [
-        ("FTE employment", *nj_pa("fte2")),
-        ("Full-time workers", *nj_pa("EMPFT2")),
-        ("Part-time workers", *nj_pa("EMPPT2")),
-        ("Managers", *nj_pa("NMGRS2")),
-        ("Starting wage ($/hr)", *nj_pa("wage2")),
-        ("% wage = $4.25", *nj_pa_share("wage2", 4.25)),
-        ("% wage = $5.05", *nj_pa_share("wage2", 5.05)),
-        ("Price of full meal ($)", *nj_pa("meal2")),
-        ("Weekday hours open", *nj_pa("HRSOPEN2")),
-    ]:
-        t2_rows.append(["C. Wave 2 means", label, nj, pa])
+    t2.append(t2_row("C. Wave 2 means", "FTE employment",
+                     df.loc[nj_mask, "fte2"], df.loc[pa_mask, "fte2"]))
+    t2.append(t2_row("C. Wave 2 means", "Percentage full-time employees",
+                     df.loc[nj_mask, "pctft2"], df.loc[pa_mask, "pctft2"]))
+    t2.append(t2_row("C. Wave 2 means", "Starting wage ($/hr)",
+                     df.loc[nj_mask, "wage2"], df.loc[pa_mask, "wage2"]))
+    t2.append(t2_row("C. Wave 2 means", "Wage = $4.25 (%)",
+                     100 * (df.loc[nj_mask, "wage2"] == 4.25).astype(int),
+                     100 * (df.loc[pa_mask, "wage2"] == 4.25).astype(int)))
+    t2.append(t2_row("C. Wave 2 means", "Wage = $5.05 (%)",
+                     100 * (df.loc[nj_mask, "wage2"] == 5.05).astype(int),
+                     100 * (df.loc[pa_mask, "wage2"] == 5.05).astype(int)))
+    t2.append(t2_row("C. Wave 2 means", "Price of full meal ($)",
+                     df.loc[nj_mask, "meal2"], df.loc[pa_mask, "meal2"]))
+    t2.append(t2_row("C. Wave 2 means", "Hours open (weekday)",
+                     df.loc[nj_mask, "HRSOPEN2"], df.loc[pa_mask, "HRSOPEN2"]))
+    t2.append(t2_row("C. Wave 2 means", "Recruiting bonus (%)",
+                     100 * df.loc[nj_mask, "SPECIAL2"],
+                     100 * df.loc[pa_mask, "SPECIAL2"]))
 
-    t2_df = pd.DataFrame(t2_rows, columns=["Panel", "Variable", "NJ", "PA"])
+    t2_df = pd.DataFrame(t2, columns=["Panel", "Variable", "NJ", "PA", "t"])
     t2_df.to_csv("outputs/tables/table2_means_key_variables.csv", index=False)
     print("TABLE 2 — Means of Key Variables")
     print("=" * 78)
     print(t2_df.to_string(index=False, float_format=lambda x: f"{x:8.2f}"))
     print()
 
-    # --- Table 3: Average Employment per Store (DiD) --------------------
-    fte = did_block("fte1", "fte2")
-    ft = did_block("EMPFT", "EMPFT2")
-    pt = did_block("EMPPT", "EMPPT2")
-    mg = did_block("NMGRS", "NMGRS2")
-    paper_table([
-        ("FTE employment", fte),
-        ("Full-time workers", ft),
-        ("Part-time workers", pt),
-        ("Managers", mg),
-    ], "TABLE 3 — Average Employment per Store Before/After (DiD)")
+    # --- Table 3: Average Employment per Store (FTE, DiD) ----------------
+    def wave_mean(v, state):
+        s = df.loc[df["STATE"] == state, v].dropna()
+        return s.mean(), s.std() / np.sqrt(len(s)), len(s)
 
-    def block_rows(b):
-        return {
-            "Wave 1 PA": b["m1"][0], "Wave 1 NJ": b["m1"][1],
-            "Wave 2 PA": b["m2"][0], "Wave 2 NJ": b["m2"][1],
-            "Change PA": b["change"][0], "Change NJ": b["change"][1],
-            "DiD": b["did"], "SE_DiD": b["se_did"],
-            "n_bal_PA": b["n_bal"][0], "n_bal_NJ": b["n_bal"][1],
-        }
+    def bal_change(state, data=None):
+        d = (df if data is None else data)
+        d = d[d["STATE"] == state].dropna(subset=["fte1", "fte2"]).copy()
+        d["ch"] = d["fte2"] - d["fte1"]
+        return d["ch"].mean(), d["ch"].std() / np.sqrt(len(d)), len(d)
 
-    pd.DataFrame([
-        {"measure": "FTE", **block_rows(fte)},
-        {"measure": "Full-time", **block_rows(ft)},
-        {"measure": "Part-time", **block_rows(pt)},
-        {"measure": "Managers", **block_rows(mg)},
-    ]).to_csv("outputs/tables/table3_employment_did.csv", index=False)
+    def nj_grp(data):
+        x = data[data["STATE"] == 1].copy()
+        # classify only stores with a reported wave-1 starting wage
+        x = x.dropna(subset=["wage1"])
+        x["wg"] = np.select([x["wage1"] == 4.25, x["wage1"] < 5.00],
+                            ["low", "mid"], default="high")
+        return x
 
-    # NJ stores by starting-wage group: change in FTE employment
-    nj = df[df["STATE"] == 1].dropna(subset=["fte1", "fte2", "wage1"]).copy()
-    nj["wgroup"] = np.select(
-        [nj["wage1"] == 4.25, nj["wage1"] < 5.00],
-        ["low ($4.25)", "mid ($4.26-4.99)"],
-        default="high ($5.00+)",
-    )
-    nj["ch"] = nj["fte2"] - nj["fte1"]
-    grp = nj.groupby("wgroup")["ch"].agg(["mean", "count"])
-    print("NJ 内部按起薪分组的 FTE 就业变化:")
-    for lbl in grp.index:
-        print(f"  {lbl:20s}  change = {grp.loc[lbl, 'mean']:+6.2f}  (n={int(grp.loc[lbl, 'count'])})")
-    print(f"  {'low - high':20s}  = {grp.loc['low ($4.25)', 'mean'] - grp.loc['high ($5.00+)', 'mean']:+6.2f}")
-    print(f"  {'mid - high':20s}  = {grp.loc['mid ($4.26-4.99)', 'mean'] - grp.loc['high ($5.00+)', 'mean']:+6.2f}")
+    def grp_means(data, v=None, method="all"):
+        x = nj_grp(data)
+        out = {}
+        for g in ["low", "mid", "high"]:
+            s = x[x["wg"] == g]
+            if method == "bal":
+                s = s.dropna(subset=["fte1", "fte2"]).copy()
+                s["ch"] = s["fte2"] - s["fte1"]
+                out[g] = s["ch"].mean()
+            else:
+                out[g] = s[v].mean()
+        return out
+
+    pa_b, se_pa_b, _ = wave_mean("fte1", 0)
+    nj_b, se_nj_b, _ = wave_mean("fte1", 1)
+    pa_a, se_pa_a, _ = wave_mean("fte2", 0)
+    nj_a, se_nj_a, _ = wave_mean("fte2", 1)
+    pa_bc, se_pa_bc, n_pa_bc = bal_change(0)
+    nj_bc, se_nj_bc, n_nj_bc = bal_change(1)
+    did_bal = nj_bc - pa_bc
+    se_did_bal = np.sqrt(se_nj_bc ** 2 + se_pa_bc ** 2)
+
+    # row 5: wave-2 employment at temporarily closed stores set to zero
+    df5 = df.copy()
+    df5.loc[df5["STATUS2"].isin([0, 2, 4, 5]), "fte2"] = 0.0
+    pa_tc, se_pa_tc, _ = bal_change(0, data=df5)
+    nj_tc, se_nj_tc, _ = bal_change(1, data=df5)
+
+    b_all = grp_means(df, "fte1")
+    a_all = grp_means(df, "fte2")
+    c_unbal = {g: a_all[g] - b_all[g] for g in ["low", "mid", "high"]}
+    c_bal = grp_means(df, method="bal")
+    c_tc = grp_means(df5, method="bal")
+
+    def t3_row(label, pa, nj, diff, g_low, g_mid, g_high):
+        return [label, pa, nj, diff, g_low, g_mid, g_high,
+                g_low - g_high, g_mid - g_high]
+
+    t3 = [
+        t3_row("1. FTE before, all obs", pa_b, nj_b, nj_b - pa_b,
+               b_all["low"], b_all["mid"], b_all["high"]),
+        t3_row("2. FTE after, all obs", pa_a, nj_a, nj_a - pa_a,
+               a_all["low"], a_all["mid"], a_all["high"]),
+        t3_row("3. Change in mean FTE", pa_a - pa_b, nj_a - nj_b,
+               (nj_a - nj_b) - (pa_a - pa_b),
+               c_unbal["low"], c_unbal["mid"], c_unbal["high"]),
+        t3_row("4. Change, balanced sample", pa_bc, nj_bc, did_bal,
+               c_bal["low"], c_bal["mid"], c_bal["high"]),
+        t3_row("5. Change, temporarily closed -> 0", pa_tc, nj_tc, nj_tc - pa_tc,
+               c_tc["low"], c_tc["mid"], c_tc["high"]),
+    ]
+    t3_df = pd.DataFrame(t3, columns=[
+        "Row", "PA", "NJ", "Diff (NJ-PA)",
+        "Low ($4.25)", "Mid ($4.26-4.99)", "High (>= $5.00)",
+        "Low - High", "Mid - High"])
+    t3_df.to_csv("outputs/tables/table3_employment_did.csv", index=False)
+
+    print("TABLE 3 — Average Employment per Store Before/After (FTE)")
+    print("=" * 78)
+    print(t3_df.round(2).to_string(index=False))
+    print()
+    print(f"  Balanced-sample DiD = {did_bal:+.2f} (SE {se_did_bal:.2f}, "
+          f"t = {did_bal / se_did_bal:.2f})")
+    print(f"  Balanced sample: NJ n = {n_nj_bc}, PA n = {n_pa_bc}")
+    print(f"  NJ by starting wage (balanced change): "
+          f"low {c_bal['low']:+.2f}, mid {c_bal['mid']:+.2f}, high {c_bal['high']:+.2f}")
     print()
 
     # --- Table 4: Reduced-Form Models for Change in Employment ----------
+    # Sample = stores with employment in both waves and a wave-1 starting wage
+    # (the paper uses 357; the public dataset yields n below). Standard errors
+    # are the ordinary (homoskedastic) OLS errors, as in the paper.
     d4 = df.dropna(subset=["fte1", "fte2", "WAGE_ST"]).copy()
     d4["ch"] = d4["fte2"] - d4["fte1"]
 
@@ -275,9 +338,9 @@ def replicate():
     t4_rows = []
     print("TABLE 4 — Reduced-Form Models for Change in Employment")
     print("=" * 78)
-    print(f"因变量 = FTE 就业变化 (Wave 2 - Wave 1)；样本 n={len(d4)}；括号内为 HC1 标准误")
+    print(f"因变量 = FTE 就业变化 (Wave 2 - Wave 1)；样本 n={len(d4)}；括号内为普通 OLS（同方差）标准误")
     for name, formula in specs4:
-        r = smf.ols(formula, data=d4).fit(cov_type="HC1")
+        r = smf.ols(formula, data=d4).fit()
         key = "gap" if "gap" in formula else "treated"
         t4_rows.append({"Model": name, "Coefficient": r.params[key],
                         "SE": r.bse[key], "n": int(r.nobs), "R2": r.rsquared})
@@ -286,30 +349,38 @@ def replicate():
     print()
 
     # --- Table 5: Changes in Wages (wage DiD) ---------------------------
+    def block_rows(b):
+        return {
+            "Wave 1 PA": b["m1"][0], "Wave 1 NJ": b["m1"][1],
+            "Wave 2 PA": b["m2"][0], "Wave 2 NJ": b["m2"][1],
+            "Change PA": b["change"][0], "Change NJ": b["change"][1],
+            "DiD": b["did"], "SE_DiD": b["se_did"],
+            "n_bal_PA": b["n_bal"][0], "n_bal_NJ": b["n_bal"][1],
+        }
+
     wage = did_block("wage1", "wage2")
     paper_table([("Starting wage ($/hr)", wage)], "TABLE 5 — Changes in Wages (DiD)")
     pd.DataFrame([block_rows(wage)]).to_csv("outputs/tables/table5_wage_did.csv", index=False)
 
     # --- Figure 1 ---------------------------------------------------------
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4.6), dpi=200)
+    # Paper layout: 2 waves (rows) x 2 states (columns) of wage histograms.
+    fig, axes = plt.subplots(2, 2, figsize=(9, 7), dpi=200)
     bins = np.arange(3.25, 7.55, 0.10)
-    for ax, (wv, title) in zip(axes, [("wage1", "Wave 1 (Feb–Mar 1992)"),
-                                      ("wage2", "Wave 2 (Nov–Dec 1992)")]):
-        ax.hist(df.loc[df["STATE"] == 1, wv].dropna(), bins=bins, alpha=0.6,
-                color="#2e5a87", label="New Jersey", density=True)
-        ax.hist(df.loc[df["STATE"] == 0, wv].dropna(), bins=bins, alpha=0.6,
-                color="#c9a86a", label="Pennsylvania", density=True)
-        ax.axvline(4.25, color="gray", ls="--", lw=1)
-        if wv == "wage2":
-            ax.axvline(5.05, color="#a33a2b", ls="--", lw=1)
-            ax.text(5.05, ax.get_ylim()[1] * 0.9, "$5.05", color="#a33a2b", ha="left")
-        ax.set_title(title)
-        ax.set_xlabel("Starting wage ($/hour)")
-        ax.set_ylabel("Density")
-        ax.legend(frameon=False, fontsize=8)
-        ax.spines[["top", "right"]].set_visible(False)
+    for r, (wv, wlabel) in enumerate([("wage1", "February 1992"),
+                                      ("wage2", "November 1992")]):
+        for c, (state, slabel) in enumerate([(1, "New Jersey"), (0, "Pennsylvania")]):
+            ax = axes[r, c]
+            ax.hist(df.loc[df["STATE"] == state, wv].dropna(), bins=bins,
+                    color="#2e5a87" if state == 1 else "#c9a86a")
+            ax.axvline(4.25, color="gray", ls="--", lw=1)
+            if wv == "wage2":
+                ax.axvline(5.05, color="#a33a2b", ls="--", lw=1)
+            ax.set_title(f"{slabel} — {wlabel}", fontsize=10)
+            ax.set_xlabel("Starting wage ($/hour)")
+            ax.set_ylabel("Number of stores")
+            ax.spines[["top", "right"]].set_visible(False)
 
-    fig.suptitle("Figure 1 — Distribution of Starting Wage Rates", fontsize=13, y=1.02)
+    fig.suptitle("Figure 1 — Distribution of Starting Wage Rates", fontsize=13, y=1.0)
     plt.tight_layout()
     plt.savefig("outputs/figures/figure1_wage_distribution.png", bbox_inches="tight")
     print("Saved outputs/figures/figure1_wage_distribution.png")

@@ -13,9 +13,10 @@ conclusion was reviewed and approved by the author.
 3. **Analysis code.** AI wrote the single self-contained workflow
    `code/run_all.py`, which builds FTE employment
    (`FTE = full-time + 0.5*part-time + managers`), the starting wage, and the
-   NJ treatment indicator (`build_sample()`); reproduces Table 2, Table 3,
-   Table 4 and Figure 1 in the paper's format (`replicate()`); implements the
-   ownership-heterogeneity extension (`extension()`); and runs the robustness
+   NJ treatment indicator (`build_sample()`); reproduces Table 2 (means of key
+   variables), Table 3 (employment DiD), Table 4 (reduced-form models), and
+   Figure 1 (wage distribution), plus the wage DiD (`replicate()`); implements
+   the ownership-heterogeneity extension (`extension()`); and runs the robustness
    checks (`robustness()`).
 4. **Packaging.** AI wrote the README, the reusable skill (`skills/SKILL.md`),
    and this disclosure.
@@ -26,7 +27,7 @@ conclusion was reviewed and approved by the author.
   matching the computed Wave-1 means to the paper's published numbers
   (NJ FTE 20.44, PA FTE 23.33; NJ wage 4.61, PA wage 4.63) — an exact match.
 - **Replication comparison.** The DiD estimates were compared to the paper's
-  Table 3 (+0.48) and Table 4 (+2.76); ours are +0.48 and +2.75.
+  Table 3 (+2.76 employment) and Table 5 (+0.48 wage); ours are +2.75 and +0.48.
 - **Manual review.** Every script's output was read and sanity-checked; the
   report numbers were re-derived from the saved CSVs, not copied from chat.
 
