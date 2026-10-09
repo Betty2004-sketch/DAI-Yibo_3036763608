@@ -14,6 +14,7 @@ import sys
 
 import numpy as np
 import pandas as pd
+import statsmodels.api as sm
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
@@ -229,9 +230,77 @@ def replicate():
     print("Saved outputs/figures/figure1_wage_distribution.png")
 
 
+# --------------------------------------------------------------------------
+# Step 3 — ownership-heterogeneity extension (merged from code/04_extension.py)
+# --------------------------------------------------------------------------
+def extension():
+    """Estimate the employment DiD separately for franchise vs company-owned stores."""
+    df = pd.read_csv("data/processed/wide.csv")
+    os.makedirs("outputs/tables", exist_ok=True)
+
+    def subgroup_did(mask, var1, var2):
+        d = df[mask].dropna(subset=[var1, var2])
+        d["ch"] = d[var2] - d[var1]
+        nj = d[d["STATE"] == 1]["ch"]
+        pa = d[d["STATE"] == 0]["ch"]
+        return nj.mean(), pa.mean(), nj.mean() - pa.mean(), len(nj), len(pa)
+
+    print("=" * 70)
+    print("扩展：按门店所有权分组的 DiD（结果变量 = FTE 就业变化）")
+    print("=" * 70)
+    print()
+
+    for co, label in [(0, "加盟店 franchise (CO_OWNED=0)"),
+                      (1, "直营店 company-owned (CO_OWNED=1)")]:
+        m = df["CO_OWNED"] == co
+        nj_ch, pa_ch, did, n_nj, n_pa = subgroup_did(m, "fte1", "fte2")
+        print(f"{label}:")
+        print(f"   NJ 变化 = {nj_ch:+.2f}  (n={n_nj})")
+        print(f"   PA 变化 = {pa_ch:+.2f}  (n={n_pa})")
+        print(f"   DiD     = {did:+.2f}")
+        print()
+
+    d = df.dropna(subset=["fte1", "fte2"]).copy()
+    d["ch"] = d["fte2"] - d["fte1"]
+    d["treated_x_co"] = d["treated"] * d["CO_OWNED"]
+
+    X = sm.add_constant(d[["treated", "CO_OWNED", "treated_x_co"]])
+    res = sm.OLS(d["ch"], X).fit(cov_type="HC1")
+
+    print("交互项回归： ch_FTE ~ NJ + CO_OWNED + NJ*CO_OWNED")
+    print(res.summary().tables[1].as_text())
+    print()
+
+    delta_fr = res.params["treated"]
+    gamma = res.params["treated_x_co"]
+    delta_co = delta_fr + gamma
+
+    vcov = res.cov_params()
+    se_co = np.sqrt(vcov.loc["treated", "treated"]
+                    + vcov.loc["treated_x_co", "treated_x_co"]
+                    + 2 * vcov.loc["treated", "treated_x_co"])
+
+    print("解读：")
+    print(f"  加盟店 DiD        (NJ)      = {delta_fr:+.2f}  (SE {res.bse['treated']:.2f})")
+    print(f"  直营店 DiD        (NJ+交互) = {delta_co:+.2f}  (SE {se_co:.2f})")
+    print(f"  所有权差异 (交互项)          = {gamma:+.2f}  (SE {res.bse['treated_x_co']:.2f}, "
+          f"p={res.pvalues['treated_x_co']:.3f})")
+    print()
+
+    out = pd.DataFrame({
+        "group": ["franchise", "company-owned"],
+        "NJ_change": [subgroup_did(df["CO_OWNED"] == 0, "fte1", "fte2")[0],
+                      subgroup_did(df["CO_OWNED"] == 1, "fte1", "fte2")[0]],
+        "PA_change": [subgroup_did(df["CO_OWNED"] == 0, "fte1", "fte2")[1],
+                      subgroup_did(df["CO_OWNED"] == 1, "fte1", "fte2")[1]],
+        "DiD": [subgroup_did(df["CO_OWNED"] == 0, "fte1", "fte2")[2],
+                subgroup_did(df["CO_OWNED"] == 1, "fte1", "fte2")[2]],
+    })
+    out.to_csv("outputs/tables/extension_ownership.csv", index=False)
+
+
 # Remaining steps are still run as separate scripts (merged one at a time).
 STEPS = [
-    "code/04_extension.py",           # ownership heterogeneity
     "code/05_robustness.py",          # robustness to controls
 ]
 
@@ -246,6 +315,11 @@ def main():
     print(">>> replicate (inline)")
     print("=" * 70)
     replicate()
+
+    print("\n" + "=" * 70)
+    print(">>> extension (inline)")
+    print("=" * 70)
+    extension()
 
     for step in STEPS:
         print(f"\n{'=' * 70}\n>>> {step}\n{'=' * 70}")
