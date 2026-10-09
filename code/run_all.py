@@ -51,6 +51,15 @@ def build_sample():
     df["d_fte"] = df["fte2"] - df["fte1"]
     df["d_wage"] = df["wage2"] - df["wage1"]
 
+    # GAP: proportional wage increase needed to reach the $5.05 minimum
+    # (NJ stores only; PA stores and NJ stores already at/above $5.05 = 0)
+    df["gap"] = np.where((df["STATE"] == 1) & (df["WAGE_ST"] < 5.05),
+                         (5.05 - df["WAGE_ST"]) / df["WAGE_ST"], 0.0)
+
+    # price of a full meal = soda + fries + entree
+    df["meal1"] = df["PSODA"] + df["PFRY"] + df["PENTREE"]
+    df["meal2"] = df["PSODA2"] + df["PFRY2"] + df["PENTREE2"]
+
     df.to_csv("data/processed/wide.csv", index=False)
 
     id_cols = ["store_id", "treated", "STATE", "CHAIN", "CO_OWNED",
@@ -84,9 +93,16 @@ def build_sample():
 # Step 2 — replicate the core tables and figure
 # --------------------------------------------------------------------------
 def replicate():
-    """Reproduce Table 2, Table 3, Table 4, and Figure 1 in the paper's format.
+    """Reproduce Table 2, Table 3, Table 4, Table 5, and Figure 1.
 
-    Column layout for Tables 3 and 4 follows the paper exactly:
+    Paper layout (Card & Krueger 1994):
+      Table 2  = Means of Key Variables (store types + wave-1/2 means)
+      Table 3  = Average Employment per Store Before/After (DiD)
+      Table 4  = Reduced-Form Models for Change in Employment (5 regressions)
+      Table 5  = Reduced-Form Models for Change in Wages (wage DiD)
+      Figure 1 = Distribution of Wage Rate
+
+    For Table 3/5 the column layout follows the paper exactly:
       Pennsylvania | New Jersey | Difference (NJ - PA)
     with rows Wave 1 (before) / Wave 2 (after) / Change. As in the paper,
     "Change" is the difference of the (full-sample) wave means, and the DiD is
@@ -149,11 +165,58 @@ def replicate():
         print("\n".join(lines), "\n")
         return lines
 
-    # --- Table 3 ----------------------------------------------------------
-    wage = did_block("wage1", "wage2")
-    paper_table([("Starting wage ($/hr)", wage)], "TABLE 3 — Changes in Wages (DiD)")
+    # --- Table 2: Means of Key Variables --------------------------------
+    CHAIN_NAMES = {1: "Burger King", 2: "KFC", 3: "Roy Rogers", 4: "Wendy's"}
 
-    # --- Table 4 ----------------------------------------------------------
+    def nj_pa(v):
+        return df.loc[df["STATE"] == 1, v].mean(), df.loc[df["STATE"] == 0, v].mean()
+
+    def nj_pa_share(v, val):
+        nj = (df.loc[df["STATE"] == 1, v] == val).mean() * 100
+        pa = (df.loc[df["STATE"] == 0, v] == val).mean() * 100
+        return nj, pa
+
+    t2_rows = []
+    for c in [1, 2, 3, 4]:
+        sh = df.groupby("STATE")["CHAIN"].apply(lambda s: (s == c).mean() * 100)
+        t2_rows.append(["A. Store types (%)", CHAIN_NAMES[c], sh[1], sh[0]])
+    co = df.groupby("STATE")["CO_OWNED"].mean() * 100
+    t2_rows.append(["A. Store types (%)", "Company-owned", co[1], co[0]])
+
+    for label, nj, pa in [
+        ("FTE employment", *nj_pa("fte1")),
+        ("Full-time workers", *nj_pa("EMPFT")),
+        ("Part-time workers", *nj_pa("EMPPT")),
+        ("Managers", *nj_pa("NMGRS")),
+        ("Starting wage ($/hr)", *nj_pa("wage1")),
+        ("% wage = $4.25", *nj_pa_share("wage1", 4.25)),
+        ("Price of full meal ($)", *nj_pa("meal1")),
+        ("Weekday hours open", *nj_pa("HRSOPEN")),
+        ("Recruiting bonus (%)", *(100 * x for x in nj_pa("BONUS"))),
+    ]:
+        t2_rows.append(["B. Wave 1 means", label, nj, pa])
+
+    for label, nj, pa in [
+        ("FTE employment", *nj_pa("fte2")),
+        ("Full-time workers", *nj_pa("EMPFT2")),
+        ("Part-time workers", *nj_pa("EMPPT2")),
+        ("Managers", *nj_pa("NMGRS2")),
+        ("Starting wage ($/hr)", *nj_pa("wage2")),
+        ("% wage = $4.25", *nj_pa_share("wage2", 4.25)),
+        ("% wage = $5.05", *nj_pa_share("wage2", 5.05)),
+        ("Price of full meal ($)", *nj_pa("meal2")),
+        ("Weekday hours open", *nj_pa("HRSOPEN2")),
+    ]:
+        t2_rows.append(["C. Wave 2 means", label, nj, pa])
+
+    t2_df = pd.DataFrame(t2_rows, columns=["Panel", "Variable", "NJ", "PA"])
+    t2_df.to_csv("outputs/tables/table2_means_key_variables.csv", index=False)
+    print("TABLE 2 — Means of Key Variables")
+    print("=" * 78)
+    print(t2_df.to_string(index=False, float_format=lambda x: f"{x:8.2f}"))
+    print()
+
+    # --- Table 3: Average Employment per Store (DiD) --------------------
     fte = did_block("fte1", "fte2")
     ft = did_block("EMPFT", "EMPFT2")
     pt = did_block("EMPPT", "EMPPT2")
@@ -163,7 +226,7 @@ def replicate():
         ("Full-time workers", ft),
         ("Part-time workers", pt),
         ("Managers", mg),
-    ], "TABLE 4 — Changes in Employment (DiD)")
+    ], "TABLE 3 — Average Employment per Store Before/After (DiD)")
 
     def block_rows(b):
         return {
@@ -174,35 +237,58 @@ def replicate():
             "n_bal_PA": b["n_bal"][0], "n_bal_NJ": b["n_bal"][1],
         }
 
-    pd.DataFrame([block_rows(wage)]).to_csv("outputs/tables/table3_wage_did.csv", index=False)
     pd.DataFrame([
         {"measure": "FTE", **block_rows(fte)},
         {"measure": "Full-time", **block_rows(ft)},
         {"measure": "Part-time", **block_rows(pt)},
         {"measure": "Managers", **block_rows(mg)},
-    ]).to_csv("outputs/tables/table4_employment_did.csv", index=False)
+    ]).to_csv("outputs/tables/table3_employment_did.csv", index=False)
 
-    # --- Table 2 ----------------------------------------------------------
-    edges = [0, 4.00, 4.25, 4.50, 4.75, 5.00, 5.05, 5.50, 6.00, np.inf]
-    labels = ["<4.00", "4.00-4.24", "4.25", "4.26-4.50",
-              "4.51-4.75", "4.76-5.00", "5.05", "5.06-5.50", ">5.50"]
-
-    def dist_col(s):
-        c = pd.cut(s, bins=edges, labels=labels, right=False).dropna()
-        return c.value_counts(normalize=True).reindex(labels).fillna(0) * 100
-
-    t2 = pd.DataFrame({
-        "Wage bin": labels,
-        "NJ wave1": dist_col(df["wage1"][df["STATE"] == 1]),
-        "PA wave1": dist_col(df["wage1"][df["STATE"] == 0]),
-        "NJ wave2": dist_col(df["wage2"][df["STATE"] == 1]),
-        "PA wave2": dist_col(df["wage2"][df["STATE"] == 0]),
-    })
-    t2.to_csv("outputs/tables/table2_wage_distribution.csv", index=False)
-    print("TABLE 2 — Distribution of starting wage rates (percent of stores)")
-    print("=" * 78)
-    print(t2.to_string(index=False, float_format=lambda x: f"{x:5.1f}"))
+    # NJ stores by starting-wage group: change in FTE employment
+    nj = df[df["STATE"] == 1].dropna(subset=["fte1", "fte2", "wage1"]).copy()
+    nj["wgroup"] = np.select(
+        [nj["wage1"] == 4.25, nj["wage1"] < 5.00],
+        ["low ($4.25)", "mid ($4.26-4.99)"],
+        default="high ($5.00+)",
+    )
+    nj["ch"] = nj["fte2"] - nj["fte1"]
+    grp = nj.groupby("wgroup")["ch"].agg(["mean", "count"])
+    print("NJ 内部按起薪分组的 FTE 就业变化:")
+    for lbl in grp.index:
+        print(f"  {lbl:20s}  change = {grp.loc[lbl, 'mean']:+6.2f}  (n={int(grp.loc[lbl, 'count'])})")
+    print(f"  {'low - high':20s}  = {grp.loc['low ($4.25)', 'mean'] - grp.loc['high ($5.00+)', 'mean']:+6.2f}")
+    print(f"  {'mid - high':20s}  = {grp.loc['mid ($4.26-4.99)', 'mean'] - grp.loc['high ($5.00+)', 'mean']:+6.2f}")
     print()
+
+    # --- Table 4: Reduced-Form Models for Change in Employment ----------
+    d4 = df.dropna(subset=["fte1", "fte2", "WAGE_ST"]).copy()
+    d4["ch"] = d4["fte2"] - d4["fte1"]
+
+    specs4 = [
+        ("(1) NJ dummy", "ch ~ treated"),
+        ("(2) NJ dummy + chain + ownership", "ch ~ treated + C(CHAIN) + CO_OWNED"),
+        ("(3) GAP", "ch ~ gap"),
+        ("(4) GAP + chain + ownership", "ch ~ gap + C(CHAIN) + CO_OWNED"),
+        ("(5) GAP + chain + ownership + region",
+         "ch ~ gap + C(CHAIN) + CO_OWNED + SOUTHJ + CENTRALJ + NORTHJ"),
+    ]
+    t4_rows = []
+    print("TABLE 4 — Reduced-Form Models for Change in Employment")
+    print("=" * 78)
+    print(f"因变量 = FTE 就业变化 (Wave 2 - Wave 1)；样本 n={len(d4)}；括号内为 HC1 标准误")
+    for name, formula in specs4:
+        r = smf.ols(formula, data=d4).fit(cov_type="HC1")
+        key = "gap" if "gap" in formula else "treated"
+        t4_rows.append({"Model": name, "Coefficient": r.params[key],
+                        "SE": r.bse[key], "n": int(r.nobs), "R2": r.rsquared})
+        print(f"{name:42s}  coef = {r.params[key]:+6.3f}  (SE {r.bse[key]:.3f})  R2={r.rsquared:.3f}")
+    pd.DataFrame(t4_rows).to_csv("outputs/tables/table4_reduced_form.csv", index=False)
+    print()
+
+    # --- Table 5: Changes in Wages (wage DiD) ---------------------------
+    wage = did_block("wage1", "wage2")
+    paper_table([("Starting wage ($/hr)", wage)], "TABLE 5 — Changes in Wages (DiD)")
+    pd.DataFrame([block_rows(wage)]).to_csv("outputs/tables/table5_wage_did.csv", index=False)
 
     # --- Figure 1 ---------------------------------------------------------
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.6), dpi=200)
@@ -310,7 +396,7 @@ def robustness():
         r = smf.ols(formula, data=data).fit(cov_type="HC1")
         return r.params["treated"], r.bse["treated"], int(r.nobs)
 
-    # (0) baseline on the full balanced sample -- same as the Table 4 DiD
+    # (0) baseline on the full balanced sample -- same as the Table 3 DiD
     d_full = df.dropna(subset=["fte1", "fte2"]).copy()
     d_full["ch"] = d_full["fte2"] - d_full["fte1"]
 
@@ -323,7 +409,7 @@ def robustness():
 
     rows = []
     est, se, n = fit("ch ~ treated", d_full)
-    rows.append({"spec": "(0) baseline (full Table 4 sample)", "DiD": est, "SE": se, "n": n})
+    rows.append({"spec": "(0) baseline (full Table 3 sample)", "DiD": est, "SE": se, "n": n})
 
     specs = [
         ("(1) baseline (control-complete sample)", "ch ~ treated"),
