@@ -63,7 +63,9 @@ Two equivalent implementations are used:
 
         ΔY_i = α + δ · NJ_i + ε_i,
 
-   where δ is the DiD estimate. Standard errors are HC1-robust. The wage version is
+   where δ is the DiD estimate. Table 4 reports ordinary (homoskedastic) OLS
+   standard errors, as in the paper; the ownership extension and the robustness
+   checks use HC1-robust standard errors. The wage version is
    the *first stage* — it confirms the policy actually raised New Jersey wages —
    and the employment version is the *main result*. The identifying assumption is
    parallel trends: absent the policy, NJ and PA employment would have moved together.
@@ -237,7 +239,8 @@ fixed effects, and +2.70 adding chain FE, ownership, hours, and prices. All are
 positive, and the first three are statistically significant at conventional
 levels.
 
-**Limitations.** (i) The Pennsylvania control group is small (79 stores), limiting
+**Limitations.** (i) The Pennsylvania control group is small (75 stores in the
+balanced sample), limiting
 precision; (ii) with only two waves, the parallel-trends assumption cannot be
 formally tested; (iii) the outcome is a snapshot measure of employment in a single
 low-wage industry, so external validity is limited.
