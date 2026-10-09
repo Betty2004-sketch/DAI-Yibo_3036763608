@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 
 
 # --------------------------------------------------------------------------
-# Step 1 — build the analysis sample (merged from code/02_build_sample.py)
+# Step 1 — build the analysis sample
 # --------------------------------------------------------------------------
 def build_sample():
     """Construct FTE / wage / treatment variables and save wide + panel data.
@@ -81,7 +81,7 @@ def build_sample():
 
 
 # --------------------------------------------------------------------------
-# Step 2 — replicate the core tables and figure (merged from code/03_paper_replication.py)
+# Step 2 — replicate the core tables and figure
 # --------------------------------------------------------------------------
 def replicate():
     """Reproduce Table 2, Table 3, Table 4, and Figure 1 in the paper's format.
@@ -230,7 +230,7 @@ def replicate():
 
 
 # --------------------------------------------------------------------------
-# Step 3 — ownership-heterogeneity extension (merged from code/04_extension.py)
+# Step 3 — ownership-heterogeneity extension
 # --------------------------------------------------------------------------
 def extension():
     """Estimate the employment DiD separately for franchise vs company-owned stores."""
@@ -299,7 +299,7 @@ def extension():
 
 
 # --------------------------------------------------------------------------
-# Step 4 — robustness checks (merged from code/05_robustness.py)
+# Step 4 — robustness checks
 # --------------------------------------------------------------------------
 def robustness():
     """Estimate the employment DiD under progressively richer specifications."""
