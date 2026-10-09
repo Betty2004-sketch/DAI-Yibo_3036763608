@@ -6,48 +6,71 @@ Pennsylvania.* American Economic Review, 84(4), 772–793.
 
 ## Research question
 
-Does raising the minimum wage reduce employment? The paper exploits a natural
-experiment: on April 1, 1992, New Jersey raised its minimum wage from $4.25 to
-$5.05 per hour, while neighboring Pennsylvania kept it at $4.25. The empirical
-strategy is a difference-in-differences (DiD) design comparing fast-food
-restaurants in New Jersey (treatment) and eastern Pennsylvania (control) before
-and after the increase.
+Does raising the minimum wage reduce employment? On April 1, 1992, New Jersey
+raised its minimum wage from $4.25 to $5.05 while neighbouring Pennsylvania kept
+it at $4.25. This project replicates the paper's difference-in-differences (DiD)
+estimate of the employment effect, compares it with the original, and adds an
+independent extension on ownership heterogeneity.
 
-## Data
+## Results (summary)
 
-- **Raw data:** `data/public.csv` — a two-wave panel of 410 fast-food
-  restaurants (Burger King, KFC, Roy Rogers, Wendy's).
-  - Wave 1 (pre-treatment): February–March 1992.
-  - Wave 2 (post-treatment): November–December 1992.
-- Variables without a suffix are Wave 1; variables with a `2` suffix
-  (e.g. `EMPFT2`, `WAGE_ST2`) are Wave 2.
+| Estimate | This replication | Original paper |
+|---|---|---|
+| Wage DiD (Table 3) | +0.48 (SE 0.05) | +0.48 |
+| **FTE employment DiD (Table 4)** | **+2.75 (SE 1.34)** | **+2.76 (SE 1.36)** |
+
+The full write-up is in `report.pdf`.
 
 ## Repository structure
 
 ```
 .
-├── data/          # raw data (public.csv)
-├── scripts/       # Python analysis pipeline
-├── processed/     # processed datasets (generated)
-├── output/        # tables and figures (generated)
-├── report/        # empirical report
+├── data/
+│   ├── raw/               # original input data (public.csv)
+│   └── processed/         # constructed analysis data
+├── code/                  # analysis code
+│   ├── run_all.py         # single self-contained workflow (all analysis)
+│   └── 01_explore_data.py # standalone data-exploration script
+├── outputs/
+│   ├── tables/            # generated tables
+│   └── figures/           # generated figures
+├── skills/
+│   └── SKILL.md           # reusable skill that regenerates tables & figures
+├── report.pdf             # final research report
+├── AI_USE_DISCLOSURE.md
+├── requirements.txt
 └── README.md
 ```
 
-## Environment
-
-- Python 3.14 with `pandas`, `numpy`, `statsmodels`, `matplotlib`, `seaborn`,
-  `scipy`.
-- A virtual environment (`.venv/`) is used locally and is excluded from git.
-
 ## Reproduce
 
-*Instructions will be finalized here once the pipeline is complete.*
+Requirements: Python 3.14 (macOS/Linux). From the project root:
 
-## Status
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/python -I code/run_all.py
+```
 
-- [x] Project scaffolding and data import
-- [ ] Sample construction and variable definitions
-- [ ] Replication of main tables (DiD on wages and employment)
-- [ ] Comparison with original paper
-- [ ] Independent extension
+`code/run_all.py` is a single self-contained script: it constructs the analysis
+sample, reproduces Table 2, Table 3, Table 4 and Figure 1, and runs the
+extension and robustness checks — all in one file, with no other scripts
+required. Running it regenerates every table (`outputs/tables/`) and figure
+(`outputs/figures/`) from `data/raw/` without any manual editing. Its four
+stages are:
+
+1. `build_sample()` — construct FTE, starting wage, treatment indicator
+2. `replicate()` — Table 2, Table 3, Table 4, and Figure 1 (paper format)
+3. `extension()` — ownership-heterogeneity extension
+4. `robustness()` — robustness to controls
+
+`code/01_explore_data.py` is a standalone data-exploration script (not part of
+the output-producing pipeline).
+
+## Data
+
+- **Raw data:** `data/raw/public.csv` — two-wave panel of 410 fast-food restaurants.
+  - Wave 1 (pre-treatment): February–March 1992.
+  - Wave 2 (post-treatment): November–December 1992.
+- Variables without a suffix are Wave 1; variables with a `2` suffix are Wave 2.
+- This is public survey data (Card & Krueger 1994); no restricted data is included.
