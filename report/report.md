@@ -138,23 +138,36 @@ monotone gradient the paper documents.
 
 **Table 4 — Reduced-form models for change in employment.** Table 4 estimates the
 employment effect in regressions of the store-level change in FTE employment on a
-New Jersey dummy (models 1–2) or on `GAP`, the proportional wage increase a store
-needed to reach the $5.05 minimum (models 3–5), with controls added
-progressively. Standard errors are the ordinary (homoskedastic) OLS errors, as in
-the paper.
+New Jersey dummy (models (i)–(ii)) or on `GAP`, the proportional wage increase a
+store needed to reach the $5.05 minimum (models (iii)–(v)), with controls added
+progressively. Standard errors (in parentheses) are the ordinary (homoskedastic)
+OLS errors, as in the paper.
 
-| Model | Coefficient | SE | n |
-|---|---|---|---|
-| (1) NJ dummy | **+2.36** | 1.15 | 365 |
-| (2) NJ dummy + chain + ownership | **+2.33** | 1.15 | 365 |
-| (3) GAP | **+15.89** | 5.95 | 365 |
-| (4) GAP + chain + ownership | **+15.19** | 6.08 | 365 |
-| (5) GAP + chain + ownership + region | **+12.02** | 7.34 | 365 |
+| Independent variable | (i) | (ii) | (iii) | (iv) | (v) |
+|---|---|---|---|---|---|
+| New Jersey dummy | +2.36 (1.15) | +2.33 (1.15) | — | — | — |
+| Initial wage gap | — | — | +15.89 (5.95) | +15.19 (6.08) | +12.03 (7.32) |
+| Controls for chain and ownership | no | yes | no | yes | yes |
+| Controls for region | no | no | no | no | yes |
+| Standard error of regression | 8.71 | 8.70 | 8.68 | 8.67 | 8.67 |
+| Probability value for controls | — | 0.299 | — | 0.381 | 0.375 |
 
-`GAP = (5.05 − WAGE_ST)/WAGE_ST` for New Jersey stores initially paying below
-$5.05, and zero otherwise. The positive `GAP` coefficient has the expected
-gradient interpretation: stores facing the largest mandated wage increase saw the
-largest employment gains, and the estimate is robust to controls. The estimates
+*Notes.* Standard errors are given in parentheses. The sample consists of 365
+stores with available data on employment and starting wages in waves 1 and 2 (the
+paper reports 357); the dependent variable in all models is the change in FTE
+employment (mean −0.252 and SD 8.749 here, vs −0.237 and 8.825 in the paper). All
+models include an unrestricted constant (not reported). `GAP = (5.05 −
+WAGE_ST)/WAGE_ST` for New Jersey stores initially paying below $5.05, and zero
+otherwise. The chain-and-ownership controls are three chain-type dummies plus a
+company-owned dummy; the region controls are dummies for the three New Jersey
+regions (South, Central, North) and two eastern Pennsylvania regions, one omitted
+as the reference; and the last row reports the p-value of the joint F test for
+exclusion of all control variables.
+
+The positive `GAP` coefficient has the expected gradient interpretation: stores
+facing the largest mandated wage increase saw the largest employment gains, and
+the estimate is robust to controls. Adding region controls (column (v)) attenuates
+the coefficient and raises its standard error, mirroring the paper. The estimates
 track the paper's (2.33, 2.30, 15.65, 14.92, 11.91); the small residual
 differences reflect the public dataset's sample (n = 365 vs the paper's 357).
 

@@ -322,30 +322,67 @@ def replicate():
 
     # --- Table 4: Reduced-Form Models for Change in Employment ----------
     # Sample = stores with employment in both waves and a wave-1 starting wage
-    # (the paper uses 357; the public dataset yields n below). Standard errors
-    # are the ordinary (homoskedastic) OLS errors, as in the paper.
+    # (the paper uses n = 357; the public dataset yields n = 365 below). Standard
+    # errors are the ordinary (homoskedastic) OLS errors, as in the paper.
     d4 = df.dropna(subset=["fte1", "fte2", "WAGE_ST"]).copy()
     d4["ch"] = d4["fte2"] - d4["fte1"]
 
+    # Restrictions for the joint F test that all control variables are zero.
+    chain_own = "C(CHAIN)[T.2] = 0, C(CHAIN)[T.3] = 0, C(CHAIN)[T.4] = 0, CO_OWNED = 0"
+    chain_own_region = (chain_own
+                        + ", SOUTHJ = 0, CENTRALJ = 0, NORTHJ = 0, PA1 = 0")
+
+    # (coefficient key, formula, has chain+ownership, has region, F-test restrictions)
     specs4 = [
-        ("(1) NJ dummy", "ch ~ treated"),
-        ("(2) NJ dummy + chain + ownership", "ch ~ treated + C(CHAIN) + CO_OWNED"),
-        ("(3) GAP", "ch ~ gap"),
-        ("(4) GAP + chain + ownership", "ch ~ gap + C(CHAIN) + CO_OWNED"),
-        ("(5) GAP + chain + ownership + region",
-         "ch ~ gap + C(CHAIN) + CO_OWNED + SOUTHJ + CENTRALJ + NORTHJ"),
+        ("treated", "ch ~ treated", False, False, None),
+        ("treated", "ch ~ treated + C(CHAIN) + CO_OWNED", True, False, chain_own),
+        ("gap", "ch ~ gap", False, False, None),
+        ("gap", "ch ~ gap + C(CHAIN) + CO_OWNED", True, False, chain_own),
+        ("gap", "ch ~ gap + C(CHAIN) + CO_OWNED + SOUTHJ + CENTRALJ + NORTHJ + PA1",
+         True, True, chain_own_region),
     ]
-    t4_rows = []
+    results4 = []
+    for key, formula, chain, region, restr in specs4:
+        r = smf.ols(formula, data=d4).fit()
+        f_p = float(r.f_test(restr).pvalue) if restr is not None else None
+        results4.append({"key": key, "coef": float(r.params[key]),
+                         "se": float(r.bse[key]),
+                         "ser": float(np.sqrt(r.scale)),
+                         "f_p": f_p, "chain": chain, "region": region})
+
+    def coef_cell(res, want):
+        return f"{res['coef']:+.3f} ({res['se']:.3f})" if res["key"] == want else "—"
+
+    def yes_no(res, attr):
+        return "yes" if res[attr] else "no"
+
+    rows4 = [
+        ["1. New Jersey dummy"] + [coef_cell(res, "treated") for res in results4],
+        ["2. Initial wage gap"] + [coef_cell(res, "gap") for res in results4],
+        ["3. Controls for chain and ownership"] + [yes_no(res, "chain") for res in results4],
+        ["4. Controls for region"] + [yes_no(res, "region") for res in results4],
+        ["5. Standard error of regression"] + [f"{res['ser']:.3f}" for res in results4],
+        ["6. Probability value for controls"]
+        + [f"{res['f_p']:.3f}" if res["f_p"] is not None else "—" for res in results4],
+    ]
+    t4_df = pd.DataFrame(rows4, columns=["Independent variable",
+                                         "(i)", "(ii)", "(iii)", "(iv)", "(v)"])
+    t4_df.to_csv("outputs/tables/table4_reduced_form.csv", index=False)
+
     print("TABLE 4 — Reduced-Form Models for Change in Employment")
     print("=" * 78)
-    print(f"因变量 = FTE 就业变化 (Wave 2 - Wave 1)；样本 n={len(d4)}；括号内为普通 OLS（同方差）标准误")
-    for name, formula in specs4:
-        r = smf.ols(formula, data=d4).fit()
-        key = "gap" if "gap" in formula else "treated"
-        t4_rows.append({"Model": name, "Coefficient": r.params[key],
-                        "SE": r.bse[key], "n": int(r.nobs), "R2": r.rsquared})
-        print(f"{name:42s}  coef = {r.params[key]:+6.3f}  (SE {r.bse[key]:.3f})  R2={r.rsquared:.3f}")
-    pd.DataFrame(t4_rows).to_csv("outputs/tables/table4_reduced_form.csv", index=False)
+    print(f"Dependent variable: change in FTE employment (mean {d4['ch'].mean():.3f}, "
+          f"SD {d4['ch'].std(ddof=1):.3f}); sample n = {len(d4)}")
+    print(t4_df.to_string(index=False))
+    print("Notes: Standard errors are given in parentheses. The sample consists of")
+    print("  stores with available data on employment and starting wages in waves 1 and 2")
+    print("  (n = 365 here; the paper reports n = 357). All models include an unrestricted")
+    print("  constant (not reported).")
+    print("  a. GAP = (5.05 - WAGE_ST)/WAGE_ST for NJ stores initially below $5.05; 0 otherwise.")
+    print("  b. Three chain-type dummies plus a company-owned dummy.")
+    print("  c. Dummies for NJ regions (South, Central, North) and eastern PA (PA1; PA2 is the")
+    print("     omitted reference).")
+    print("  d. P-value of the joint F test for exclusion of all control variables.")
     print()
 
     # --- Table 5: Changes in Wages (wage DiD) ---------------------------

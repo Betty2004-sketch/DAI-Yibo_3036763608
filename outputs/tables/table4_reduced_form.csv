@@ -1,6 +1,7 @@
-Model,Coefficient,SE,n,R2
-(1) NJ dummy,2.358973265073951,1.1457220009984916,365,0.011543525262780019
-(2) NJ dummy + chain + ownership,2.3273805609121867,1.1509577885645035,365,0.024862463765532472
-(3) GAP,15.891260494456125,5.952417730056202,365,0.019256558698224957
-(4) GAP + chain + ownership,15.194326442424966,6.082506290279705,365,0.03060585038766994
-(5) GAP + chain + ownership + region,12.020668863062552,7.341658232634361,365,0.03499118272656865
+Independent variable,(i),(ii),(iii),(iv),(v)
+1. New Jersey dummy,+2.359 (1.146),+2.327 (1.151),—,—,—
+2. Initial wage gap,—,—,+15.891 (5.952),+15.194 (6.083),+12.028 (7.323)
+3. Controls for chain and ownership,no,yes,no,yes,yes
+4. Controls for region,no,no,no,no,yes
+5. Standard error of regression,8.710,8.699,8.676,8.674,8.668
+6. Probability value for controls,—,0.299,—,0.381,0.375
