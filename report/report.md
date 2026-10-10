@@ -108,15 +108,16 @@ their comparability. The two waves show the policy's bite: New Jersey's average
 starting wage jumps from $4.61 to $5.08 while Pennsylvania's stays at $4.62, and
 the share of New Jersey stores paying the new $5.05 minimum reaches 85.5%.
 
-**Figure 1 — Distribution of the wage rate.** Figure 1 plots the starting-wage
-distribution in a 2 × 2 grid: rows are the February 1992 and November 1992
-waves, columns are New Jersey and Pennsylvania.
+**Figure 1 — Distribution of the wage rate.** Figure 1 plots the distribution
+of starting wages in two stacked panels — February 1992 (top) and November 1992
+(bottom) — each grouping New Jersey and Pennsylvania bars side by side in $0.25
+wage bins running from $3.50 to $6.25, with the y-axis in **percent of stores**.
 
 ![Figure 1 — Distribution of starting wage rates](../outputs/figures/figure1_wage_distribution.png)
 
 Before the reform both states' wages cluster at the old $4.25 minimum; after the
 reform the New Jersey distribution shifts right to the new $5.05 minimum while
-Pennsylvania stays at $4.25.
+Pennsylvania stays at $4.25 (with a single Pennsylvania store reporting $6.25).
 
 **Table 3 — Average employment per store before and after.** Table 3 is the
 paper's headline table, and it reports **FTE employment only**. Columns (i)–(ii)

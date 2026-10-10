@@ -99,7 +99,7 @@ def replicate():
       Table 2  = Means of Key Variables (store types + wave-1/2 means)
       Table 3  = Average Employment per Store Before/After (FTE, DiD)
       Table 4  = Reduced-Form Models for Change in Employment (5 regressions)
-      Figure 1 = Distribution of Wage Rate (2 waves x 2 states)
+      Figure 1 = Distribution of Wage Rate (2 stacked panels, grouped NJ+PA)
 
     Table 3 reproduces the paper's FTE-only layout: columns for Pennsylvania,
     New Jersey, the NJ-PA difference, three NJ starting-wage groups, and the
@@ -332,24 +332,35 @@ def replicate():
     print()
 
     # --- Figure 1 ---------------------------------------------------------
-    # Paper layout: 2 waves (rows) x 2 states (columns) of wage histograms.
-    fig, axes = plt.subplots(2, 2, figsize=(9, 7), dpi=200)
-    bins = np.arange(3.25, 7.55, 0.10)
-    for r, (wv, wlabel) in enumerate([("wage1", "February 1992"),
-                                      ("wage2", "November 1992")]):
-        for c, (state, slabel) in enumerate([(1, "New Jersey"), (0, "Pennsylvania")]):
-            ax = axes[r, c]
-            ax.hist(df.loc[df["STATE"] == state, wv].dropna(), bins=bins,
-                    color="#2e5a87" if state == 1 else "#c9a86a")
-            ax.axvline(4.25, color="gray", ls="--", lw=1)
-            if wv == "wage2":
-                ax.axvline(5.05, color="#a33a2b", ls="--", lw=1)
-            ax.set_title(f"{slabel} — {wlabel}", fontsize=10)
-            ax.set_xlabel("Starting wage ($/hour)")
-            ax.set_ylabel("Number of stores")
-            ax.spines[["top", "right"]].set_visible(False)
+    # Paper layout: two stacked panels (February 1992 and November 1992).
+    # Each panel groups New Jersey + Pennsylvania bars side by side, with
+    # "percent of stores" on the y-axis and $0.25 wage bins on the x-axis.
+    bins = np.arange(3.375, 6.626, 0.25)          # 12 bins; centres $3.50..$6.25
+    centres = (bins[:-1] + bins[1:]) / 2
+    bar_w = 0.09                                  # bar width within each $0.25 slot
 
-    fig.suptitle("Figure 1 — Distribution of Starting Wage Rates", fontsize=13, y=1.0)
+    fig, axes = plt.subplots(2, 1, figsize=(7, 8), dpi=200, sharex=True)
+    for ax, (wv, wlabel) in zip(axes, [("wage1", "February 1992"),
+                                       ("wage2", "November 1992")]):
+        nj = df.loc[df["STATE"] == 1, wv].dropna()
+        pa = df.loc[df["STATE"] == 0, wv].dropna()
+        nj_pct = 100 * np.histogram(nj, bins=bins)[0] / len(nj)
+        pa_pct = 100 * np.histogram(pa, bins=bins)[0] / len(pa)
+        ax.bar(centres - bar_w / 2, nj_pct, width=bar_w, color="#2e5a87",
+               label="New Jersey")
+        ax.bar(centres + bar_w / 2, pa_pct, width=bar_w, color="#c9a86a",
+               label="Pennsylvania")
+        ax.text(0.02, 0.97, wlabel, transform=ax.transAxes,
+                va="top", ha="left", fontsize=11)
+        ax.set_ylabel("Percent of stores")
+        ax.spines[["top", "right"]].set_visible(False)
+
+    axes[0].legend(loc="upper right", frameon=False, fontsize=9)
+    axes[-1].set_xlabel("Wage range ($/hour)")
+    axes[-1].set_xticks(centres)
+    axes[-1].set_xticklabels([f"${c:.2f}" for c in centres], fontsize=8)
+    axes[-1].set_xlim(3.375, 6.375)
+    fig.suptitle("Figure 1 — Distribution of Starting Wage Rates", fontsize=13, y=0.99)
     plt.tight_layout()
     plt.savefig("outputs/figures/figure1_wage_distribution.png", bbox_inches="tight")
     print("Saved outputs/figures/figure1_wage_distribution.png")
