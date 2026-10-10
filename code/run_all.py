@@ -333,33 +333,43 @@ def replicate():
 
     # --- Figure 1 ---------------------------------------------------------
     # Paper layout: two stacked panels (February 1992 and November 1992).
-    # Each panel groups New Jersey + Pennsylvania bars side by side, with
-    # "percent of stores" on the y-axis and $0.25 wage bins on the x-axis.
-    bins = np.arange(3.375, 6.626, 0.25)          # 12 bins; centres $3.50..$6.25
-    centres = (bins[:-1] + bins[1:]) / 2
-    bar_w = 0.09                                  # bar width within each $0.25 slot
+    # Each panel groups New Jersey (left) + Pennsylvania (right) bars side by
+    # side. The paper's wage bins run in $0.10 increments from $4.25 to $5.55
+    # (fourteen bins), with the x-axis tick labels at every $0.10; stores
+    # reporting a wage above $5.55 fall off the right edge of the axis and are
+    # simply not plotted. Each panel has its own y-axis scale (February 0-35,
+    # November 0-90) and its own "Wage Range" x-axis.
+    centres = np.arange(4.25, 5.56, 0.10)
+    edges = np.arange(4.20, 5.61, 0.10)
+    bar_w = 0.04
 
-    fig, axes = plt.subplots(2, 1, figsize=(7, 8), dpi=200, sharex=True)
-    for ax, (wv, wlabel) in zip(axes, [("wage1", "February 1992"),
-                                       ("wage2", "November 1992")]):
+    panels = [("wage1", "February 1992", 35, np.arange(0, 36, 5)),
+              ("wage2", "November 1992", 90, np.arange(0, 91, 10))]
+    fig, axes = plt.subplots(2, 1, figsize=(7, 8), dpi=200)
+    for ax, (wv, wlabel, ymax, yticks) in zip(axes, panels):
         nj = df.loc[df["STATE"] == 1, wv].dropna()
         pa = df.loc[df["STATE"] == 0, wv].dropna()
-        nj_pct = 100 * np.histogram(nj, bins=bins)[0] / len(nj)
-        pa_pct = 100 * np.histogram(pa, bins=bins)[0] / len(pa)
-        ax.bar(centres - bar_w / 2, nj_pct, width=bar_w, color="#2e5a87",
+        # Percent of stores with a nonmissing wage; the histogram only counts
+        # wages within the plotted $4.20-$5.60 range, so above-$5.55 stores are
+        # in the denominator but off the right edge of the axis.
+        nj_pct = 100.0 * np.histogram(nj, bins=edges)[0] / len(nj)
+        pa_pct = 100.0 * np.histogram(pa, bins=edges)[0] / len(pa)
+        ax.bar(centres - bar_w, nj_pct, width=bar_w, color="#2b2b2b",
                label="New Jersey")
-        ax.bar(centres + bar_w / 2, pa_pct, width=bar_w, color="#c9a86a",
-               label="Pennsylvania")
+        ax.bar(centres, pa_pct, width=bar_w, color="#f2f2f2", hatch="///",
+               edgecolor="#2b2b2b", label="Pennsylvania")
         ax.text(0.02, 0.97, wlabel, transform=ax.transAxes,
                 va="top", ha="left", fontsize=11)
-        ax.set_ylabel("Percent of stores")
+        ax.set_ylabel("Percent of Stores")
+        ax.set_ylim(0, ymax)
+        ax.set_yticks(yticks)
+        ax.set_xlim(4.20, 5.60)
+        ax.set_xticks(centres)
+        ax.set_xticklabels([f"${c:.2f}" for c in centres], fontsize=6)
+        ax.set_xlabel("Wage Range")
         ax.spines[["top", "right"]].set_visible(False)
 
     axes[0].legend(loc="upper right", frameon=False, fontsize=9)
-    axes[-1].set_xlabel("Wage range ($/hour)")
-    axes[-1].set_xticks(centres)
-    axes[-1].set_xticklabels([f"${c:.2f}" for c in centres], fontsize=8)
-    axes[-1].set_xlim(3.375, 6.375)
     fig.suptitle("Figure 1 — Distribution of Starting Wage Rates", fontsize=13, y=0.99)
     plt.tight_layout()
     plt.savefig("outputs/figures/figure1_wage_distribution.png", bbox_inches="tight")

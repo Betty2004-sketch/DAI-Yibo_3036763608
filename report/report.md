@@ -110,14 +110,21 @@ the share of New Jersey stores paying the new $5.05 minimum reaches 85.5%.
 
 **Figure 1 — Distribution of the wage rate.** Figure 1 plots the distribution
 of starting wages in two stacked panels — February 1992 (top) and November 1992
-(bottom) — each grouping New Jersey and Pennsylvania bars side by side in $0.25
-wage bins running from $3.50 to $6.25, with the y-axis in **percent of stores**.
+(bottom) — each grouping New Jersey and Pennsylvania bars side by side, with the
+y-axis in **percent of stores**. Following the paper, the wage bins run in $0.10
+increments from $4.25 to $5.55 (fourteen bins); each panel has its own y-axis
+scale (February 0–35, November 0–90) and its own "Wage Range" x-axis, with the
+tick values labelled at every $0.10.
 
 ![Figure 1 — Distribution of starting wage rates](../outputs/figures/figure1_wage_distribution.png)
 
 Before the reform both states' wages cluster at the old $4.25 minimum; after the
 reform the New Jersey distribution shifts right to the new $5.05 minimum while
-Pennsylvania stays at $4.25 (with a single Pennsylvania store reporting $6.25).
+Pennsylvania stays at $4.25. The February New Jersey $4.25 bar holds 32.2% of
+stores and the November New Jersey $5.05 bar holds 89.3%, matching the paper's
+figure. Stores reporting a wage above $5.55 (including the single Pennsylvania
+store at $6.25 in November) fall off the right edge of the axis and are not
+plotted.
 
 **Table 3 — Average employment per store before and after.** Table 3 is the
 paper's headline table, and it reports **FTE employment only**. Columns (i)–(ii)
