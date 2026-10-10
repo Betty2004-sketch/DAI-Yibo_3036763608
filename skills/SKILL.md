@@ -41,7 +41,7 @@ stages in order:
 | Function | What it produces |
 |---|---|
 | `build_sample()` | FTE employment, starting wage, NJ treatment indicator |
-| `replicate()` | Table 2 (Means), Table 3 (Employment DiD), Table 4 (Reduced-Form), Table 5 (Wage DiD), Figure 1 (wage distribution) |
+| `replicate()` | Table 2 (Means), Table 3 (Employment DiD), Table 4 (Reduced-Form), Figure 1 (wage distribution) |
 | `extension()` | Ownership-heterogeneity extension |
 | `robustness()` | Robustness to controls |
 

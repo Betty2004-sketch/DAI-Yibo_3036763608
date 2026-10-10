@@ -33,7 +33,7 @@ variables (suffix `2`) side by side.
 - **Store identifier.** The questionnaire number `SHEET` is not unique (number 407
   labels two different restaurants), so the row index is used as the store id.
 - **Balanced sample.** The DiD uses restaurants observed in both waves: 384 stores
-  for employment (309 NJ, 75 PA) and 370 for the wage first stage (302 NJ, 68 PA).
+  for employment (309 NJ, 75 PA).
 
 **Key variables.**
 
@@ -65,9 +65,10 @@ Two equivalent implementations are used:
 
    where δ is the DiD estimate. Table 4 reports ordinary (homoskedastic) OLS
    standard errors, as in the paper; the ownership extension and the robustness
-   checks use HC1-robust standard errors. The wage version is
-   the *first stage* — it confirms the policy actually raised New Jersey wages —
-   and the employment version is the *main result*. The identifying assumption is
+   checks use HC1-robust standard errors. The first stage — that the policy
+   actually raised New Jersey wages — is confirmed directly by the starting-wage
+   means in Table 2 (New Jersey: $4.61 → $5.08; Pennsylvania: flat at $4.62), and
+   the employment version is the *main result*. The identifying assumption is
    parallel trends: absent the policy, NJ and PA employment would have moved together.
 
 ## 4. Core replication results and comparison with the original
@@ -173,28 +174,15 @@ the coefficient and raises its standard error, mirroring the paper. The estimate
 track the paper's (2.33, 2.30, 15.65, 14.92, 11.91); the small residual
 differences reflect the public dataset's sample (n = 365 vs the paper's 357).
 
-**Table 5 — Change in wages (first stage).**
-
-| | Pennsylvania | New Jersey | Difference (NJ − PA) |
-|---|---|---|---|
-| Wave 1 (before) | 4.63 | 4.61 | −0.02 |
-| Wave 2 (after) | 4.62 | 5.08 | +0.46 |
-| Change | −0.01 | +0.47 | **+0.48** (SE 0.05) |
-
-The starting wage rose by $0.47 in New Jersey and was flat in Pennsylvania, for a
-wage difference-in-differences of **+0.48 (SE 0.05)** — the first stage confirming
-the policy actually raised New Jersey wages.
-
-**Comparison with the original paper.** The paper reports a wage DiD of **+0.48**
-and an FTE-employment DiD of **+2.76 (SE 1.36)**. Our estimates — **+0.48** and
-**+2.75 (SE 1.34)** — reproduce them essentially exactly, and the wave-1/wave-2
-means match the published values to two decimals. The reduced-form `GAP` estimates
-(+15.89 vs the paper's +15.65) and the New Jersey dummy (+2.36 vs +2.33) also
-track the original. The substantive conclusion is unchanged: New Jersey's
-minimum-wage increase did **not** reduce employment. Relative to Pennsylvania,
-FTE employment rose by about 2.75 workers per store, with the share of full-time
-staff rising in New Jersey relative to Pennsylvania (32.8 → 35.9% vs 35.0 →
-30.4%).
+**Comparison with the original paper.** The paper reports an FTE-employment DiD
+of **+2.76 (SE 1.36)**. Our estimate — **+2.75 (SE 1.34)** — reproduces it
+essentially exactly, and the wave-1/wave-2 means match the published values to two
+decimals. The reduced-form `GAP` estimates (+15.89 vs the paper's +15.65) and the
+New Jersey dummy (+2.36 vs +2.33) also track the original. The substantive
+conclusion is unchanged: New Jersey's minimum-wage increase did **not** reduce
+employment. Relative to Pennsylvania, FTE employment rose by about 2.75 workers
+per store, with the share of full-time staff rising in New Jersey relative to
+Pennsylvania (32.8 → 35.9% vs 35.0 → 30.4%).
 
 ## 5. Independent extension: does the effect differ by store ownership?
 

@@ -93,13 +93,12 @@ def build_sample():
 # Step 2 — replicate the core tables and figure
 # --------------------------------------------------------------------------
 def replicate():
-    """Reproduce Table 2, Table 3, Table 4, Table 5, and Figure 1.
+    """Reproduce Table 2, Table 3, Table 4, and Figure 1.
 
     Paper layout (Card & Krueger 1994):
       Table 2  = Means of Key Variables (store types + wave-1/2 means)
       Table 3  = Average Employment per Store Before/After (FTE, DiD)
       Table 4  = Reduced-Form Models for Change in Employment (5 regressions)
-      Table 5  = Reduced-Form Models for Change in Wages (wage DiD)
       Figure 1 = Distribution of Wage Rate (2 waves x 2 states)
 
     Table 3 reproduces the paper's FTE-only layout: columns for Pennsylvania,
@@ -111,59 +110,6 @@ def replicate():
     df = pd.read_csv("data/processed/wide.csv")
     os.makedirs("outputs/tables", exist_ok=True)
     os.makedirs("outputs/figures", exist_ok=True)
-
-    def did_block(v1, v2):
-        g1 = df.groupby("STATE")[v1]           # wave 1 (before)
-        g2 = df.groupby("STATE")[v2]           # wave 2 (after)
-        m1, s1, n1 = g1.mean(), g1.std(), g1.count()
-        m2, s2, n2 = g2.mean(), g2.std(), g2.count()
-        se1 = s1 / np.sqrt(n1)
-        se2 = s2 / np.sqrt(n2)
-
-        # Change = difference of the (full-sample) wave means, as in the paper.
-        change = m2 - m1
-
-        # SE of the change: std of store-level changes / sqrt(n) on the balanced panel
-        d = df.dropna(subset=[v1, v2]).copy()
-        d["ch"] = d[v2] - d[v1]
-        chg = d.groupby("STATE")["ch"].agg(["std", "count"])
-        se_change = chg["std"] / np.sqrt(chg["count"])
-        n_bal = chg["count"]
-
-        # DiD = NJ change - PA change; SE = sqrt(se_NJ^2 + se_PA^2)
-        did = change[1] - change[0]
-        se_did = np.sqrt(se_change[1] ** 2 + se_change[0] ** 2)
-
-        diff1, se_diff1 = m1[1] - m1[0], np.sqrt(se1[1] ** 2 + se1[0] ** 2)
-        diff2, se_diff2 = m2[1] - m2[0], np.sqrt(se2[1] ** 2 + se2[0] ** 2)
-
-        return {
-            "m1": m1, "m2": m2, "se1": se1, "se2": se2,
-            "change": change, "se_change": se_change, "n_bal": n_bal,
-            "did": did, "se_did": se_did,
-            "diff1": diff1, "se_diff1": se_diff1, "diff2": diff2, "se_diff2": se_diff2,
-        }
-
-    def paper_table(blocks, title):
-        lines = []
-        lines.append("=" * 78)
-        lines.append(title)
-        lines.append("=" * 78)
-        lines.append(f"{'':28s}{'Pennsylvania':>15s}{'New Jersey':>14s}{'Difference (NJ-PA)':>20s}")
-        for label, b in blocks:
-            lines.append(f"{label}")
-            lines.append(f"  Wave 1 (before)   {b['m1'][0]:>12.2f} ({b['se1'][0]:.2f})"
-                         f"{b['m1'][1]:>11.2f} ({b['se1'][1]:.2f})"
-                         f"{b['diff1']:>15.2f} ({b['se_diff1']:.2f})")
-            lines.append(f"  Wave 2 (after)    {b['m2'][0]:>12.2f} ({b['se2'][0]:.2f})"
-                         f"{b['m2'][1]:>11.2f} ({b['se2'][1]:.2f})"
-                         f"{b['diff2']:>15.2f} ({b['se_diff2']:.2f})")
-            lines.append(f"  Change            {b['change'][0]:>12.2f} ({b['se_change'][0]:.2f})"
-                         f"{b['change'][1]:>11.2f} ({b['se_change'][1]:.2f})"
-                         f"{b['did']:>15.2f} ({b['se_did']:.2f})")
-        lines.append("-" * 78)
-        print("\n".join(lines), "\n")
-        return lines
 
     # --- Table 2: Means of Key Variables --------------------------------
     CHAIN_NAMES = {1: "Burger King", 2: "KFC", 3: "Roy Rogers", 4: "Wendy's"}
@@ -384,20 +330,6 @@ def replicate():
     print("     omitted reference).")
     print("  d. P-value of the joint F test for exclusion of all control variables.")
     print()
-
-    # --- Table 5: Changes in Wages (wage DiD) ---------------------------
-    def block_rows(b):
-        return {
-            "Wave 1 PA": b["m1"][0], "Wave 1 NJ": b["m1"][1],
-            "Wave 2 PA": b["m2"][0], "Wave 2 NJ": b["m2"][1],
-            "Change PA": b["change"][0], "Change NJ": b["change"][1],
-            "DiD": b["did"], "SE_DiD": b["se_did"],
-            "n_bal_PA": b["n_bal"][0], "n_bal_NJ": b["n_bal"][1],
-        }
-
-    wage = did_block("wage1", "wage2")
-    paper_table([("Starting wage ($/hr)", wage)], "TABLE 5 — Changes in Wages (DiD)")
-    pd.DataFrame([block_rows(wage)]).to_csv("outputs/tables/table5_wage_did.csv", index=False)
 
     # --- Figure 1 ---------------------------------------------------------
     # Paper layout: 2 waves (rows) x 2 states (columns) of wage histograms.
