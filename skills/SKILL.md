@@ -13,6 +13,8 @@ reusable entry point for reproducing the project's results.
 
 - Python 3.14 with the packages pinned in `requirements.txt`.
 - Raw data at `data/raw/public.csv` (410 fast-food restaurants, two-wave panel).
+  This file is **not included** in the repo — obtain it and place it at that path
+  before running (see `data/raw/README.md`).
 
 ## One-time setup
 

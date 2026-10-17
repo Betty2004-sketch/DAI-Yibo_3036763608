@@ -25,7 +25,7 @@ The full write-up is in `report.pdf`.
 ```
 .
 ├── data/
-│   ├── raw/               # original input data (public.csv)
+│   ├── raw/               # original input data (public.csv — not uploaded)
 │   └── processed/         # constructed analysis data
 ├── code/                  # analysis code
 │   ├── run_all.py         # single self-contained workflow (all analysis)
@@ -74,3 +74,6 @@ the output-producing pipeline).
   - Wave 2 (post-treatment): November–December 1992.
 - Variables without a suffix are Wave 1; variables with a `2` suffix are Wave 2.
 - This is public survey data (Card & Krueger 1994); no restricted data is included.
+- **The raw file is not uploaded to this repository** (course policy). Obtain
+  `public.csv` and place it at `data/raw/public.csv` before running — see
+  `data/raw/README.md`.
